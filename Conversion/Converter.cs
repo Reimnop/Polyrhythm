@@ -49,7 +49,6 @@ public class Converter
         
         // Turn frames into prefab
         // TODO: Don't generate a new set of triangles every single frame
-        int objectsCount = 1;
         var prefab = new Prefab();
         var parent = prefab.CreateObject("Parent");
         parent.PositionParenting = true;
@@ -107,12 +106,9 @@ public class Converter
                 });
                 
                 prefabObject.SetParent(parent);
-                objectsCount++;
             }
         }
-        
-        Console.WriteLine("Created {0} objects", objectsCount);
-        
+
         return prefab;
     }
 
