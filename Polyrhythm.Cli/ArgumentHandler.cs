@@ -59,8 +59,7 @@ public class ArgumentHandler
                 var option = GetOptionLong(longName);
                 result.AddOptionValue(option.ShortName, option.LongName, value);
             }
-            
-            if (arg.StartsWith("-")) // Use short name
+            else if (arg.StartsWith("-")) // Use short name
             {
                 var shortName = arg[1..];
                 if (!HasOptionShort(shortName))
