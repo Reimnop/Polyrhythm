@@ -28,7 +28,8 @@ if (args.Length == 1 && (args[0] == "-h" || args[0] == "--help"))
 }
 
 var parseResult = argumentHandler.ParseArguments(args);
-var name = parseResult.GetOptionValueShort("n");
+var prefabName = parseResult.GetOptionValueShort("pn");
+var themeName = parseResult.GetOptionValueShort("tn");
 var input = parseResult.GetOptionValueShort("i");
 var prefabOutput = parseResult.GetOptionValueShort("po");
 var themeOutput = parseResult.GetOptionValueShort("to");
@@ -42,7 +43,7 @@ using var model = new Model(stream);
 
 // Generate theme
 var theme = new Theme();
-theme.Name = name;
+theme.Name = themeName;
 
 for (int i = 0; i < 9; i++)
 {
@@ -66,7 +67,7 @@ var result = converter.CreatePrefab(initializeCallback: animationHandler =>
 });
 
 var prefab = result.Prefab;
-prefab.Name = name;
+prefab.Name = prefabName;
 prefab.Type = PrefabType.Characters;
 
 // Export theme and prefab
