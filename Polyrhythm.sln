@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polyrhythm", "Polyrhythm.csproj", "{CB6CC4C3-16D3-4905-A709-B258F6AF94A4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polyrhythm", "Polyrhythm/Polyrhythm.csproj", "{CB6CC4C3-16D3-4905-A709-B258F6AF94A4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polyrhythm.Cli", "Polyrhythm.Cli\Polyrhythm.Cli.csproj", "{D06B3A4D-E92D-4C5D-9871-FC2D234AD4A4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,5 +14,9 @@ Global
 		{CB6CC4C3-16D3-4905-A709-B258F6AF94A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CB6CC4C3-16D3-4905-A709-B258F6AF94A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CB6CC4C3-16D3-4905-A709-B258F6AF94A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D06B3A4D-E92D-4C5D-9871-FC2D234AD4A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D06B3A4D-E92D-4C5D-9871-FC2D234AD4A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D06B3A4D-E92D-4C5D-9871-FC2D234AD4A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D06B3A4D-E92D-4C5D-9871-FC2D234AD4A4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
