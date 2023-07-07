@@ -27,7 +27,7 @@ var result = converter.CreatePrefab(initializeCallback: animationHandler =>
     animationHandler.Transition(model.Animations[0]);
 });
 var prefab = result.Prefab;
-prefab.ExportToFile("output.lsp", PrefabBuildFlags.AbsoluteRotation);
+prefab.ExportToFile("output.lsp");
 theme.ExportToFile("output.lst");
 
 Console.WriteLine($"Created prefab with {result.ObjectCount} objects and {result.FrameCount} frames.");

@@ -43,12 +43,11 @@ public class Converter
             var frame = new PrefabFrame(triangles.ToList());
             frames.Add(frame);
         }
-        
-        int objectCount = 0;
+
+        var prefabObjectPool = new PrefabObjectPool(frames.Max(x => x.Triangles.Count * 2));
         int frameCount = 0;
         
         // Turn frames into prefab
-        // TODO: Don't generate a new set of triangles every single frame
         var prefab = new Prefab();
         var parent = prefab.CreateObject("Viewport");
         parent.PositionParenting = true;
@@ -65,57 +64,23 @@ public class Converter
         });
         parent.RotationKeyframes.Add(new RotationKeyframe());
         parent.ColorKeyframes.Add(new ColorKeyframe());
-        objectCount++;
-        
+
         for (int i = 0; i < frames.Count; i++)
         {
-            var startTime = i * configuration.FrameDuration;
-            var killTime = Math.Min(startTime + configuration.FrameDuration, configuration.Duration);
-            
-            if (startTime >= killTime) // Early exit, no more frames to render
-                break;
-            
-            var frame = frames[i];
-            foreach (var prefabTriangle in EnumeratePrefabTriangles(frame, configuration.InputTheme))
-            {
-                var prefabObject = prefab.CreateObject($"Frame {i}");
-                prefabObject.StartTime = (float) startTime;
-                prefabObject.AutoKillType = PrefabObjectAutoKillType.Fixed;
-                prefabObject.AutoKillOffset = (float) (killTime - startTime);
-                prefabObject.RenderDepth = prefabTriangle.RenderDepth;
-                prefabObject.PositionParenting = true;
-                prefabObject.ScaleParenting = true;
-                prefabObject.RotationParenting = true;
-                prefabObject.Origin = new Vector2(0.5f, 0.5f);
-                prefabObject.ObjectType = PrefabObjectType.Decoration;
-                prefabObject.Shape = PrefabObjectShape.Triangle;
-                prefabObject.ShapeOption = (int) PrefabTriangleOption.RightAngledSolid;
-                prefabObject.PositionKeyframes.Add(new PositionKeyframe
-                {
-                    Value = new Vector2((float) prefabTriangle.Position.X, (float) prefabTriangle.Position.Y)
-                });
-                prefabObject.ScaleKeyframes.Add(new ScaleKeyframe
-                {
-                    Value = new Vector2((float) prefabTriangle.Scale.X, (float) prefabTriangle.Scale.Y)
-                });
-                prefabObject.RotationKeyframes.Add(new RotationKeyframe
-                {
-                    Value = (float) MathHelper.RadiansToDegrees(prefabTriangle.Rotation)
-                });
-                prefabObject.ColorKeyframes.Add(new ColorKeyframe
-                {
-                    Value = prefabTriangle.ThemeColor
-                });
-                
-                prefabObject.SetParent(parent);
-                
-                objectCount++;
-            }
-            
+            var time = i * configuration.FrameDuration;
+            updateCallback?.Invoke(time);
+            prefabObjectPool.AddFrame((float) time, EnumeratePrefabTriangles(frames[i], configuration.InputTheme));
             frameCount++;
         }
+        
+        var objects = prefabObjectPool
+            .BuildPrefabObjects(prefab, (float) configuration.Duration)
+            .ToList();
+        
+        foreach (var obj in objects)
+            parent.AddChild(obj);
 
-        return new PrefabCreationResult(prefab, objectCount, frameCount);
+        return new PrefabCreationResult(prefab, objects.Count, frameCount);
     }
 
     private static IEnumerable<PrefabTriangle> EnumeratePrefabTriangles(PrefabFrame frame, Theme theme)
@@ -137,17 +102,11 @@ public class Converter
             GeometryHelper.GetRightTriangles(triangle2d, out var tri0, out var tri1);
             GeometryHelper.GetPositionScaleRotation(tri0, out var position0, out var scale0, out var rotation0);
             GeometryHelper.GetPositionScaleRotation(tri1, out var position1, out var scale1, out var rotation1);
-            var renderDepth = CalculateRenderDepth(depth);
             var color = GetThemeColor(shadedTriangle.Color, theme);
 
-            yield return new PrefabTriangle(position0, scale0, rotation0, renderDepth, color);
-            yield return new PrefabTriangle(position1, scale1, rotation1, renderDepth, color);
+            yield return new PrefabTriangle(position0, scale0, rotation0, depth, color);
+            yield return new PrefabTriangle(position1, scale1, rotation1, depth, color);
         }
-    }
-
-    private static int CalculateRenderDepth(double depth)
-    {
-        return (int) ((depth * 2.0 - 1.0) * 60.0);
     }
 
     private static int GetThemeColor(Vector3d color, Theme theme)
