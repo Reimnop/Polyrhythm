@@ -25,16 +25,13 @@ public class Converter
         this.configuration = configuration;
     }
 
-    public Prefab CreatePrefab(InitializeCallback? initializeCallback = null, UpdateCallback? updateCallback = null)
+    public PrefabCreationResult CreatePrefab(InitializeCallback? initializeCallback = null, UpdateCallback? updateCallback = null)
     {
         var model = configuration.InputModel;
         var animationHandler = new AnimationHandler(model);
         initializeCallback?.Invoke(animationHandler);
-
-        // TODO: Don't hardcode camera
-        var camera = new PerspectiveCamera();
-        camera.Position = Vector3d.UnitZ * 2.0;
-        var pipeline = new Pipeline(model, animationHandler, camera, VertexShader.Factory, TriangleShader.Factory);
+        
+        var pipeline = new Pipeline(model, animationHandler, configuration.Camera, VertexShader.Factory, TriangleShader.Factory);
         
         // Render all frames into a list
         var frames = new List<PrefabFrame>();
@@ -47,10 +44,13 @@ public class Converter
             frames.Add(frame);
         }
         
+        int objectCount = 0;
+        int frameCount = 0;
+        
         // Turn frames into prefab
         // TODO: Don't generate a new set of triangles every single frame
         var prefab = new Prefab();
-        var parent = prefab.CreateObject("Parent");
+        var parent = prefab.CreateObject("Viewport");
         parent.PositionParenting = true;
         parent.ScaleParenting = true;
         parent.RotationParenting = true;
@@ -61,16 +61,18 @@ public class Converter
         parent.PositionKeyframes.Add(new PositionKeyframe());
         parent.ScaleKeyframes.Add(new ScaleKeyframe
         {
-            Value = Vector2.One * 10.0f
+            Value = new Vector2((float) configuration.FrameSize.X, (float) configuration.FrameSize.Y)
         });
         parent.RotationKeyframes.Add(new RotationKeyframe());
         parent.ColorKeyframes.Add(new ColorKeyframe());
+        objectCount++;
+        
         for (int i = 0; i < frames.Count; i++)
         {
             var startTime = i * configuration.FrameDuration;
             var killTime = Math.Min(startTime + configuration.FrameDuration, configuration.Duration);
             
-            if (startTime >= killTime) // Early exit
+            if (startTime >= killTime) // Early exit, no more frames to render
                 break;
             
             var frame = frames[i];
@@ -106,10 +108,14 @@ public class Converter
                 });
                 
                 prefabObject.SetParent(parent);
+                
+                objectCount++;
             }
+            
+            frameCount++;
         }
 
-        return prefab;
+        return new PrefabCreationResult(prefab, objectCount, frameCount);
     }
 
     private static IEnumerable<PrefabTriangle> EnumeratePrefabTriangles(PrefabFrame frame, Theme theme)

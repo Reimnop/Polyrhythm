@@ -3,6 +3,7 @@ using PAPrefabToolkit;
 using PAThemeToolkit;
 using Polyrhythm.Conversion;
 using Polyrhythm.Data;
+using Polyrhythm.Util;
 
 using var stream = File.OpenRead("input.fbx");
 using var model = new Model(stream);
@@ -14,11 +15,19 @@ for (int i = 0; i < 9; i++)
     theme.Objects[i] = new Color(t, t, t);
 }
 
-var configuration = new Configuration(model, theme, 10.0, 0.25, Vector2d.One * 5.0);
+var camera = new PerspectiveCamera
+{
+    Position = Vector3d.UnitZ * 1.5
+};
+
+var configuration = new Configuration(model, theme, camera, 4.0, 1.0 / 24.0, Vector2d.One * 10.0);
 var converter = new Converter(configuration);
-var prefab = converter.CreatePrefab(initializeCallback: animationHandler =>
+var result = converter.CreatePrefab(initializeCallback: animationHandler =>
 {
     animationHandler.Transition(model.Animations[0]);
 });
+var prefab = result.Prefab;
 prefab.ExportToFile("output.lsp", PrefabBuildFlags.AbsoluteRotation);
 theme.ExportToFile("output.lst");
+
+Console.WriteLine($"Created prefab with {result.ObjectCount} objects and {result.FrameCount} frames.");
