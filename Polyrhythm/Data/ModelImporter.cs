@@ -7,6 +7,9 @@ namespace Polyrhythm.Data;
 
 public class ModelImporter : IDisposable
 {
+    public ModelCamera? Camera { get; }
+    public IReadOnlyList<ModelLight> Lights { get; }
+
     private readonly AssimpContext context;
     private readonly Scene scene;
 
@@ -14,22 +17,52 @@ public class ModelImporter : IDisposable
     {
         context = new AssimpContext();
         scene = context.ImportFileFromStream(stream, PostProcessSteps.Triangulate | PostProcessSteps.GenerateNormals | PostProcessSteps.FlipUVs);
+        
+        // Get camera data
+        if (scene.CameraCount > 0) // Check if there is a camera
+        {
+            var camera = scene.Cameras[0];
+            var name = camera.Name;
+            var horizontalFieldOfView = camera.FieldOfview * 2.0;
+            Camera = new ModelCamera(name, horizontalFieldOfView);
+        }
+        
+        // Get light data
+        // I'm not sure if I like LINQ here
+        var lights = (from sceneLight in scene.Lights
+                let name = sceneLight.Name
+                let type = sceneLight.LightType switch
+                {
+                    LightSourceType.Directional => ModelLightType.Directional,
+                    LightSourceType.Point => ModelLightType.Point,
+                    LightSourceType.Spot => ModelLightType.Spot,
+                    _ => throw new Exception($"Unknown light type '{sceneLight.LightType}'!")
+                }
+                let color = new Vector3d(sceneLight.ColorDiffuse.R, sceneLight.ColorDiffuse.G, sceneLight.ColorDiffuse.B)
+                let intensity = sceneLight.AttenuationConstant
+                let innerConeAngle = sceneLight.AngleInnerCone
+                let outerConeAngle = sceneLight.AngleOuterCone
+                let range = sceneLight.AttenuationLinear
+                let falloff = sceneLight.AttenuationQuadratic
+                select new ModelLight(name, type, color, intensity, innerConeAngle, outerConeAngle, range, falloff))
+            .ToList();
+
+        Lights = lights;
     }
 
     public IEnumerable<ModelMaterial> LoadMaterials()
     {
-        return scene.Materials.Select(material =>
-        {
-            var albedo = new Vector3d(material.ColorDiffuse.R, material.ColorDiffuse.G, material.ColorDiffuse.B);
-            var metallic = material.Reflectivity;
-            var roughness = 1.0 - material.Shininess;
-            return new ModelMaterial(material.Name, albedo, metallic, roughness);
-        });
+        return from material in scene.Materials
+            let albedo = new Vector3d(material.ColorDiffuse.R, material.ColorDiffuse.G, material.ColorDiffuse.B)
+            let metallic = material.Reflectivity
+            let roughness = 1.0 - material.Shininess
+            select new ModelMaterial(material.Name, albedo, metallic, roughness);
     }
 
     public IEnumerable<Mesh<Vertex>> LoadMeshes()
     {
-        return scene.Meshes.Select(mesh => new Mesh<Vertex>(mesh.Name, EnumerateVertices(mesh), mesh.GetIndices()));
+        return from mesh in scene.Meshes 
+            select new Mesh<Vertex>(mesh.Name, EnumerateVertices(mesh), mesh.GetIndices());
     }
 
     private static IEnumerable<Vertex> EnumerateVertices(Mesh mesh)
@@ -51,21 +84,22 @@ public class ModelImporter : IDisposable
 
     public IEnumerable<ModelAnimation> LoadAnimations()
     {
-        return scene.Animations.Select(animation => 
-            new ModelAnimation(
+        return from animation in scene.Animations
+            select new ModelAnimation(
                 animation.Name,
                 animation.DurationInTicks,
                 animation.TicksPerSecond,
-                animation.NodeAnimationChannels.Select(channel =>
-                    new ModelNodeAnimationChannel(
-                        channel.NodeName,
-                        channel.PositionKeys.Select(x => new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z))), 
-                        channel.ScalingKeys.Select(x => new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z))),
-                        channel.RotationKeys.Select(x => new Key<Quaterniond>(x.Time, new Quaterniond(x.Value.X, x.Value.Y, x.Value.Z, x.Value.W)))
-                    )
+                from channel in animation.NodeAnimationChannels
+                select new ModelNodeAnimationChannel(
+                    channel.NodeName,
+                    from x in channel.PositionKeys
+                    select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)),
+                    from x in channel.ScalingKeys
+                    select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)),
+                    from x in channel.RotationKeys
+                    select new Key<Quaterniond>(x.Time, new Quaterniond(x.Value.X, x.Value.Y, x.Value.Z, x.Value.W))
                 )
-            )
-        );
+            );
     }
 
     public Node<ModelNode> LoadModel()

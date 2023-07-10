@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using OpenTK.Mathematics;
+﻿using OpenTK.Mathematics;
 using PAPrefabToolkit;
 using PAThemeToolkit;
 using Polyrhythm.Cli;
@@ -11,9 +9,9 @@ using Polyrhythm.Util;
 var argumentHandler = new ArgumentHandler()
     .AddOption("pn", "prefab-name", "Prefab name")
     .AddOption("tn", "theme-name", "Theme name")
-    .AddOption("i", "input", "Input path")
     .AddOption("po", "prefab-output", "Prefab output path")
     .AddOption("to", "theme-output", "Theme output path")
+    .AddOption("m", "model", "Input model path")
     .AddOption("w", "width", "Viewport width")
     .AddOption("h", "height", "Viewport height")
     .AddOption("r", "framerate", "Framerate")
@@ -30,9 +28,9 @@ if (args.Length == 1 && (args[0] == "-h" || args[0] == "--help"))
 var parseResult = argumentHandler.ParseArguments(args);
 var prefabName = parseResult.GetOptionValueShort("pn");
 var themeName = parseResult.GetOptionValueShort("tn");
-var input = parseResult.GetOptionValueShort("i");
 var prefabOutput = parseResult.GetOptionValueShort("po");
 var themeOutput = parseResult.GetOptionValueShort("to");
+var input = parseResult.GetOptionValueShort("i");
 var width = Util.GetArgumentDoubleShort("w", parseResult);
 var height = Util.GetArgumentDoubleShort("h", parseResult);
 var framerate = Util.GetArgumentDoubleShort("r", parseResult);
