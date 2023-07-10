@@ -93,11 +93,11 @@ public class ModelImporter : IDisposable
                 select new ModelNodeAnimationChannel(
                     channel.NodeName,
                     from x in channel.PositionKeys
-                        select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)),
+                    select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)),
                     from x in channel.ScalingKeys
-                        select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)),
+                    select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)),
                     from x in channel.RotationKeys
-                        select new Key<Quaterniond>(x.Time, new Quaterniond(x.Value.X, x.Value.Y, x.Value.Z, x.Value.W))
+                    select new Key<Quaterniond>(x.Time, new Quaterniond(x.Value.X, x.Value.Y, x.Value.Z, x.Value.W))
                 )
             );
     }
