@@ -1,6 +1,6 @@
 namespace Polyrhythm.Util;
 
-public class TreeBuilder<T>
+public class TreeBuilder<T> where T : INamed
 {
     private T value;
     private List<TreeBuilder<T>> children = new List<TreeBuilder<T>>();

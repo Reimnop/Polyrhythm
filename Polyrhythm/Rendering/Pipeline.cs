@@ -17,20 +17,17 @@ public class Pipeline
 {
     private readonly Model model;
     private readonly IModelTransformer? modelTransformer;
-    private readonly Camera camera;
     private readonly VertexShaderFactory<InputVertex, StagingVertex> vertexShaderFactory;
     private readonly TriangleShaderFactory<Triangle<StagingVertex>, ShadedTriangle> triangleShaderFactory;
     
     public Pipeline(
         Model model,
         IModelTransformer? modelTransformer,
-        Camera camera,
         VertexShaderFactory<InputVertex, StagingVertex> vertexShaderFactory, 
         TriangleShaderFactory<Triangle<StagingVertex>, ShadedTriangle> triangleShaderFactory)
     {
         this.model = model;
         this.modelTransformer = modelTransformer;
-        this.camera = camera;
         this.vertexShaderFactory = vertexShaderFactory;
         this.triangleShaderFactory = triangleShaderFactory;
     }
@@ -41,6 +38,27 @@ public class Pipeline
         var renderDataList = CollectRenderDataRecursively(model.RootNode, Matrix4d.Identity);
         
         // Get camera data
+        if (model.Cameras.Count == 0)
+            throw new InvalidOperationException("No cameras found!");
+        
+        var modelCamera = model.Cameras[0];
+
+        // Get node associated with camera
+        if (!model.RootNode.TryFindNode(modelCamera.Name, out var cameraNode))
+            throw new InvalidOperationException($"Camera node '{modelCamera.Name}' not found!");
+
+        var transform = GetNodeTransform(cameraNode.Value);
+        var position = transform.ExtractTranslation();
+        var rotation = transform.ExtractRotation();
+
+        var camera = new PerspectiveCamera
+        {
+            Position = position,
+            Rotation = modelCamera.Rotation * rotation,
+            DepthNear = modelCamera.NearClippingPlane,
+            DepthFar = modelCamera.FarClippingPlane,
+            Fov = modelCamera.HorizontalFieldOfView / aspectRatio // Convert to vertical FOV
+        };
         var cameraData = camera.GetCameraData(aspectRatio);
         
         // Process render data
@@ -60,9 +78,17 @@ public class Pipeline
     // Process triangles using the triangle shader
     private IEnumerable<ShadedTriangle> ProcessTriangles(IEnumerable<Triangle<StagingVertex>> triangles)
     {
-        // TODO: Don't hardcode these values
-        var ambientColor = new Vector3d(0.1, 0.1, 0.1);
-        var lightDirection = new Vector3d(0.0, 0.0, -1.0);
+        var ambientColor = Vector3d.One * 0.1;
+        
+        var directionalLight = model.Lights.FirstOrDefault(x => x.Type == ModelLightType.Directional);
+        if (directionalLight == null)
+            throw new NotImplementedException();
+        if (!model.RootNode.TryFindNode(directionalLight.Name, out var lightNode))
+            throw new InvalidOperationException($"Light node '{directionalLight.Name}' not found!");
+        
+        var lightTransform = GetNodeTransform(lightNode.Value);
+        var lightRotation = directionalLight.Rotation * lightTransform.ExtractRotation();
+        var lightDirection = Vector3d.Normalize(lightRotation * Vector3d.UnitZ);
         var triangleShader = triangleShaderFactory(ambientColor, lightDirection);
         foreach (var triangle in triangles)
         {

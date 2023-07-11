@@ -2,7 +2,7 @@
 using PAPrefabToolkit;
 using PAThemeToolkit;
 using Polyrhythm.Cli;
-using Polyrhythm.Conversion;
+using Polyrhythm;
 using Polyrhythm.Data;
 using Polyrhythm.Util;
 
@@ -30,7 +30,7 @@ var prefabName = parseResult.GetOptionValueShort("pn");
 var themeName = parseResult.GetOptionValueShort("tn");
 var prefabOutput = parseResult.GetOptionValueShort("po");
 var themeOutput = parseResult.GetOptionValueShort("to");
-var input = parseResult.GetOptionValueShort("i");
+var input = parseResult.GetOptionValueShort("m");
 var width = Util.GetArgumentDoubleShort("w", parseResult);
 var height = Util.GetArgumentDoubleShort("h", parseResult);
 var framerate = Util.GetArgumentDoubleShort("r", parseResult);
@@ -49,13 +49,8 @@ for (int i = 0; i < 9; i++)
     theme.Objects[i] = new Color(t, t, t);
 }
 
-var camera = new PerspectiveCamera
-{
-    Position = Vector3d.UnitZ * 1.5
-};
-
 // Convert model to prefab
-var configuration = new Configuration(model, theme, camera, duration, 1.0 / framerate, new Vector2d(width, height));
+var configuration = new Configuration(model, theme, duration, 1.0 / framerate, new Vector2d(width, height));
 var converter = new Converter(configuration);
 var result = converter.CreatePrefab(initializeCallback: animationHandler =>
 {

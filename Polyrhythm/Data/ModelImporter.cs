@@ -7,9 +7,6 @@ namespace Polyrhythm.Data;
 
 public class ModelImporter : IDisposable
 {
-    public ModelCamera? Camera { get; }
-    public IReadOnlyList<ModelLight> Lights { get; }
-
     private readonly AssimpContext context;
     private readonly Scene scene;
 
@@ -17,37 +14,46 @@ public class ModelImporter : IDisposable
     {
         context = new AssimpContext();
         scene = context.ImportFileFromStream(stream, PostProcessSteps.Triangulate | PostProcessSteps.GenerateNormals | PostProcessSteps.FlipUVs);
-        
-        // Get camera data
-        if (scene.CameraCount > 0) // Check if there is a camera
-        {
-            var camera = scene.Cameras[0];
-            var name = camera.Name;
-            var horizontalFieldOfView = camera.FieldOfview * 2.0;
-            Camera = new ModelCamera(name, horizontalFieldOfView);
-        }
-        
-        // Get light data
-        // I'm not sure if I like LINQ here
-        var lights = (from sceneLight in scene.Lights
-                let name = sceneLight.Name
-                let type = sceneLight.LightType switch
-                {
-                    LightSourceType.Directional => ModelLightType.Directional,
-                    LightSourceType.Point => ModelLightType.Point,
-                    LightSourceType.Spot => ModelLightType.Spot,
-                    _ => throw new Exception($"Unknown light type '{sceneLight.LightType}'!")
-                }
-                let color = new Vector3d(sceneLight.ColorDiffuse.R, sceneLight.ColorDiffuse.G, sceneLight.ColorDiffuse.B)
-                let intensity = sceneLight.AttenuationConstant
-                let innerConeAngle = sceneLight.AngleInnerCone
-                let outerConeAngle = sceneLight.AngleOuterCone
-                let range = sceneLight.AttenuationLinear
-                let falloff = sceneLight.AttenuationQuadratic
-                select new ModelLight(name, type, color, intensity, innerConeAngle, outerConeAngle, range, falloff))
-            .ToList();
+    }
 
-        Lights = lights;
+    public IEnumerable<ModelCamera> LoadCameras()
+    {
+        return from sceneCamera in scene.Cameras
+            let name = sceneCamera.Name
+            let horizontalFieldOfView = sceneCamera.FieldOfview
+            let nearPlane = sceneCamera.ClipPlaneNear
+            let farPlane = sceneCamera.ClipPlaneFar
+            let up = new Vector3d(sceneCamera.Up.X, sceneCamera.Up.Y, sceneCamera.Up.Z)
+            let direction = new Vector3d(sceneCamera.Direction.X, sceneCamera.Direction.Y, sceneCamera.Direction.Z)
+            let right = Vector3d.Cross(up, direction)
+            let rotationMatrix = new Matrix3d(right, up, direction)
+            let rotation = Quaterniond.FromMatrix(rotationMatrix)
+            select new ModelCamera(name, horizontalFieldOfView, nearPlane, farPlane, rotation);
+    }
+
+    public IEnumerable<ModelLight> LoadLights()
+    {
+        return from sceneLight in scene.Lights
+            let name = sceneLight.Name
+            let type = sceneLight.LightType switch
+            {
+                LightSourceType.Directional => ModelLightType.Directional,
+                LightSourceType.Point => ModelLightType.Point,
+                LightSourceType.Spot => ModelLightType.Spot,
+                _ => throw new Exception($"Unknown light type '{sceneLight.LightType}'!")
+            }
+            let color = new Vector3d(sceneLight.ColorDiffuse.R, sceneLight.ColorDiffuse.G, sceneLight.ColorDiffuse.B)
+            let intensity = sceneLight.AttenuationConstant
+            let innerConeAngle = sceneLight.AngleInnerCone
+            let outerConeAngle = sceneLight.AngleOuterCone
+            let range = sceneLight.AttenuationLinear
+            let falloff = sceneLight.AttenuationQuadratic
+            let up = new Vector3d(sceneLight.Up.X, sceneLight.Up.Y, sceneLight.Up.Z)
+            let direction = new Vector3d(sceneLight.Direction.X, sceneLight.Direction.Y, sceneLight.Direction.Z)
+            let right = Vector3d.Cross(up, direction)
+            let rotationMatrix = new Matrix3d(right, up, direction)
+            let rotation = Quaterniond.FromMatrix(rotationMatrix)
+            select new ModelLight(name, type, color, intensity, innerConeAngle, outerConeAngle, range, falloff, rotation);
     }
 
     public IEnumerable<ModelMaterial> LoadMaterials()
@@ -84,22 +90,25 @@ public class ModelImporter : IDisposable
 
     public IEnumerable<ModelAnimation> LoadAnimations()
     {
-        return from animation in scene.Animations
-            select new ModelAnimation(
-                animation.Name,
-                animation.DurationInTicks,
-                animation.TicksPerSecond,
-                from channel in animation.NodeAnimationChannels
-                select new ModelNodeAnimationChannel(
-                    channel.NodeName,
-                    from x in channel.PositionKeys
-                    select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)),
-                    from x in channel.ScalingKeys
-                    select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)),
-                    from x in channel.RotationKeys
-                    select new Key<Quaterniond>(x.Time, new Quaterniond(x.Value.X, x.Value.Y, x.Value.Z, x.Value.W))
-                )
-            );
+        return from sceneAnimation in scene.Animations
+            let name = sceneAnimation.Name
+            let durationInTicks = sceneAnimation.DurationInTicks
+            let ticksPerSecond = sceneAnimation.TicksPerSecond
+            let nodeAnimationChannels = LoadModelNodeAnimationChannel(sceneAnimation.NodeAnimationChannels)
+            select new ModelAnimation(name, durationInTicks, ticksPerSecond, nodeAnimationChannels);
+    }
+
+    private static IEnumerable<ModelNodeAnimationChannel> LoadModelNodeAnimationChannel(IEnumerable<NodeAnimationChannel> nodeAnimationChannels)
+    {
+        return from nodeAnimationChannel in nodeAnimationChannels 
+            let name = nodeAnimationChannel.NodeName 
+            let positionKeys = from x in nodeAnimationChannel.PositionKeys 
+                select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)) 
+            let scaleKeys = from x in nodeAnimationChannel.ScalingKeys 
+                select new Key<Vector3d>(x.Time, new Vector3d(x.Value.X, x.Value.Y, x.Value.Z)) 
+            let rotationKeys = from x in nodeAnimationChannel.RotationKeys 
+                select new Key<Quaterniond>(x.Time, new Quaterniond(x.Value.X, x.Value.Y, x.Value.Z, x.Value.W)) 
+            select new ModelNodeAnimationChannel(name, positionKeys, scaleKeys, rotationKeys);
     }
 
     public Node<ModelNode> LoadModel()

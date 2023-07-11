@@ -19,8 +19,9 @@ public class ModelLight
     public double OuterConeAngle { get; }
     public double Range { get; }
     public double Falloff { get; }
+    public Quaterniond Rotation { get; }
     
-    public ModelLight(string name, ModelLightType type, Vector3d color, double intensity, double innerConeAngle, double outerConeAngle, double range, double falloff)
+    public ModelLight(string name, ModelLightType type, Vector3d color, double intensity, double innerConeAngle, double outerConeAngle, double range, double falloff, Quaterniond rotation)
     {
         Name = name;
         Type = type;
@@ -30,5 +31,6 @@ public class ModelLight
         OuterConeAngle = outerConeAngle;
         Range = range;
         Falloff = falloff;
+        Rotation = rotation;
     }
 }

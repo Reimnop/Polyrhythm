@@ -7,7 +7,7 @@ using Polyrhythm.Rendering.Shader;
 using Polyrhythm.Util;
 using Vector2 = System.Numerics.Vector2;
 
-namespace Polyrhythm.Conversion;
+namespace Polyrhythm;
 
 public delegate void InitializeCallback(AnimationHandler animationHandler);
 
@@ -31,7 +31,7 @@ public class Converter
         var animationHandler = new AnimationHandler(model);
         initializeCallback?.Invoke(animationHandler);
         
-        var pipeline = new Pipeline(model, animationHandler, configuration.Camera, VertexShader.Factory, TriangleShader.Factory);
+        var pipeline = new Pipeline(model, animationHandler, VertexShader.Factory, TriangleShader.Factory);
         
         // Render all frames into a list
         var frames = new List<PrefabFrame>();

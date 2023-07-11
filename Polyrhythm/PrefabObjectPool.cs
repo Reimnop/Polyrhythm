@@ -3,7 +3,7 @@ using PAPrefabToolkit;
 using Polyrhythm.Data;
 using Vector2 = System.Numerics.Vector2;
 
-namespace Polyrhythm.Conversion;
+namespace Polyrhythm;
 
 /// <summary>
 /// A fixed pool of reusable prefab objects.
