@@ -54,7 +54,7 @@ public class Pipeline
         var camera = new PerspectiveCamera
         {
             Position = position,
-            Rotation = modelCamera.Rotation * rotation,
+            Rotation = rotation * modelCamera.Rotation,
             DepthNear = modelCamera.NearClippingPlane,
             DepthFar = modelCamera.FarClippingPlane,
             Fov = modelCamera.HorizontalFieldOfView / aspectRatio // Convert to vertical FOV
@@ -87,7 +87,7 @@ public class Pipeline
             throw new InvalidOperationException($"Light node '{directionalLight.Name}' not found!");
         
         var lightTransform = GetNodeTransform(lightNode.Value);
-        var lightRotation = directionalLight.Rotation * lightTransform.ExtractRotation();
+        var lightRotation = lightTransform.ExtractRotation() * directionalLight.Rotation;
         var lightDirection = Vector3d.Normalize(lightRotation * Vector3d.UnitZ);
         var triangleShader = triangleShaderFactory(ambientColor, lightDirection);
         return from triangle in triangles
