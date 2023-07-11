@@ -90,30 +90,24 @@ public class Pipeline
         var lightRotation = directionalLight.Rotation * lightTransform.ExtractRotation();
         var lightDirection = Vector3d.Normalize(lightRotation * Vector3d.UnitZ);
         var triangleShader = triangleShaderFactory(ambientColor, lightDirection);
-        foreach (var triangle in triangles)
-        {
-            yield return triangleShader.Process(triangle);
-        }
+        return from triangle in triangles
+            select triangleShader.Process(triangle);
     }
 
     // Process render data using the vertex shader
     private IEnumerable<StagingVertex> ProcessRenderData(IEnumerable<RenderData> renderDataList, CameraData cameraData)
     {
-        foreach (var renderData in renderDataList)
-        {
-            var vertexShader = vertexShaderFactory(renderData.ModelMatrix, cameraData.View, cameraData.Projection);
-            foreach (var vertex in renderData.Vertices)
-            {
-                yield return vertexShader.Process(vertex);
-            }
-        }
+        return from renderData in renderDataList 
+            let vertexShader = vertexShaderFactory(renderData.ModelMatrix, cameraData.View, cameraData.Projection) 
+            from vertex in renderData.Vertices 
+            select vertexShader.Process(vertex);
     }
 
     private IEnumerable<RenderData> CollectRenderDataRecursively(Node<ModelNode> node, Matrix4d parentTransform)
     {
         var modelNode = node.Value;
         var modelMatrix = GetNodeTransform(modelNode) * parentTransform;
-        
+
         // Create and yield render data from meshes
         foreach (var modelMesh in modelNode.Meshes)
         {
@@ -125,13 +119,8 @@ public class Pipeline
         }
 
         // Recursively collect render data from children
-        foreach (var child in node.Children)
-        {
-            foreach (var renderData in CollectRenderDataRecursively(child, modelMatrix))
-            {
-                yield return renderData;
-            }
-        }
+        foreach (var renderData in node.Children.SelectMany(child => CollectRenderDataRecursively(child, modelMatrix)))
+            yield return renderData;
     }
 
     private Matrix4d GetNodeTransform(ModelNode node)
