@@ -11,7 +11,6 @@
       <PackageReference Include="AssimpNet" Version="4.1.0" />
       <PackageReference Include="OpenTK.Mathematics" Version="4.7.7" />
       <PackageReference Include="PAPrefabToolkit" Version="2.0.0" />
-      <PackageReference Include="PAThemeToolkit" Version="1.1.4" />
     </ItemGroup>
 
 </Project>

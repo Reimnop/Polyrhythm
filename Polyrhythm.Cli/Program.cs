@@ -1,17 +1,14 @@
 ﻿using OpenTK.Mathematics;
 using PAPrefabToolkit;
-using PAThemeToolkit;
 using Polyrhythm.Cli;
 using Polyrhythm;
 using Polyrhythm.Data;
-using Polyrhythm.Util;
 
 var argumentHandler = new ArgumentHandler()
-    .AddOption("pn", "prefab-name", "Prefab name")
-    .AddOption("tn", "theme-name", "Theme name")
-    .AddOption("po", "prefab-output", "Prefab output path")
-    .AddOption("to", "theme-output", "Theme output path")
+    .AddOption("n", "name", "Output prefab name")
+    .AddOption("o", "output", "Prefab output path")
     .AddOption("m", "model", "Input model path")
+    .AddOption("s", "depth", "Shading depth (Use 0 for no shading)")
     .AddOption("w", "width", "Viewport width")
     .AddOption("h", "height", "Viewport height")
     .AddOption("r", "framerate", "Framerate")
@@ -26,11 +23,10 @@ if (args.Length == 1 && (args[0] == "-h" || args[0] == "--help"))
 }
 
 var parseResult = argumentHandler.ParseArguments(args);
-var prefabName = parseResult.GetOptionValueShort("pn");
-var themeName = parseResult.GetOptionValueShort("tn");
-var prefabOutput = parseResult.GetOptionValueShort("po");
-var themeOutput = parseResult.GetOptionValueShort("to");
+var prefabName = parseResult.GetOptionValueShort("n");
+var prefabOutput = parseResult.GetOptionValueShort("o");
 var input = parseResult.GetOptionValueShort("m");
+var shadingDepth = Util.GetArgumentIntShort("s", parseResult);
 var width = Util.GetArgumentDoubleShort("w", parseResult);
 var height = Util.GetArgumentDoubleShort("h", parseResult);
 var framerate = Util.GetArgumentDoubleShort("r", parseResult);
@@ -39,20 +35,10 @@ var duration = Util.GetArgumentDoubleShort("d", parseResult);
 using var stream = File.OpenRead(input);
 using var model = new Model(stream);
 
-// Generate theme
-var theme = new Theme();
-theme.Name = themeName;
-
-for (int i = 0; i < 9; i++)
-{
-    var t = 1.0f - i / 8.0f;
-    theme.Objects[i] = new Color(t, t, t);
-}
-
 // Convert model to prefab
-var configuration = new Configuration(model, theme, duration, 1.0 / framerate, new Vector2d(width, height));
+var configuration = new Configuration(model, shadingDepth, duration, 1.0 / framerate, new Vector2d(width, height));
 var converter = new Converter(configuration);
-var result = converter.CreatePrefab(initializeCallback: animationHandler =>
+var result = converter.StartRender(initializeCallback: animationHandler =>
 {
     if (model.Animations.Count == 0)
         return;
@@ -64,7 +50,16 @@ prefab.Name = prefabName;
 prefab.Type = PrefabType.Characters;
 
 // Export theme and prefab
-theme.ExportToFile(themeOutput);
 prefab.ExportToFile(prefabOutput);
 
-Console.WriteLine($"Created prefab with {result.ObjectCount} objects and {result.FrameCount} frames.");
+// Print statistics
+Console.WriteLine($"Rendered {result.FrameCount} frames.");
+Console.WriteLine($"Exported prefab to '{prefabOutput}'. ({result.ObjectCount} objects, {result.Palette.Count} colors)");
+Console.WriteLine();
+Console.WriteLine("Paste the following values into a theme in Project Arrhythmia:");
+for (int i = 0; i < result.Palette.Count; i++)
+{
+    var color = result.Palette[i];
+    Console.WriteLine($"  {i + 1}: {Util.ColorToHex(color)}");
+}
+

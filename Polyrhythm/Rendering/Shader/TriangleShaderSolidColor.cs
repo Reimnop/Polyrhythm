@@ -3,17 +3,8 @@ using Polyrhythm.Data;
 
 namespace Polyrhythm.Rendering.Shader;
 
-public class TriangleShader : IShader<Triangle<StagingVertex>, ShadedTriangle>
+public class TriangleShaderSolidColor : IShader<Triangle<StagingVertex>, ShadedTriangle>
 {
-    private readonly Vector3d ambientColor;
-    private readonly Vector3d lightDirection;
-
-    public TriangleShader(Vector3d ambientColor, Vector3d lightDirection)
-    {
-        this.ambientColor = ambientColor;
-        this.lightDirection = lightDirection;
-    }
-    
     public ShadedTriangle Process(Triangle<StagingVertex> input)
     {
         ProcessVertex(input[0], out var pointA, out var colorA);
@@ -27,15 +18,12 @@ public class TriangleShader : IShader<Triangle<StagingVertex>, ShadedTriangle>
 
     private void ProcessVertex(StagingVertex stagingVertex, out Vector3d position, out Vector3d color)
     {
-        var vertexNormal = stagingVertex.Normal;
-        var vertexColor = stagingVertex.Color;
-        var light = Vector3d.Dot(vertexNormal, -lightDirection);
         position = stagingVertex.Position.Xyz / stagingVertex.Position.W;
-        color = vertexColor * light + vertexColor * ambientColor;
+        color = stagingVertex.Color;
     }
     
     public static IShader<Triangle<StagingVertex>, ShadedTriangle> Factory(Vector3d ambientColor, Vector3d lightDirection)
     {
-        return new TriangleShader(ambientColor, lightDirection);
+        return new TriangleShaderSolidColor();
     }
 }

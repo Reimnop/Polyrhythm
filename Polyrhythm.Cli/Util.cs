@@ -1,4 +1,5 @@
 ﻿using System;
+using OpenTK.Mathematics;
 
 namespace Polyrhythm.Cli;
 
@@ -54,5 +55,13 @@ public static class Util
             value = parseResult.GetOptionValueLong(longName);
         }
         return result;
+    }
+
+    public static string ColorToHex(Vector3d color)
+    {
+        var r = MathHelper.Clamp((int) (color.X * 255), 0, 255);
+        var g = MathHelper.Clamp((int) (color.Y * 255), 0, 255);
+        var b = MathHelper.Clamp((int) (color.Z * 255), 0, 255);
+        return $"#{r:X2}{g:X2}{b:X2}";
     }
 }

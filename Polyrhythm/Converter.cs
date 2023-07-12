@@ -1,6 +1,5 @@
 using OpenTK.Mathematics;
 using PAPrefabToolkit;
-using PAThemeToolkit;
 using Polyrhythm.Data;
 using Polyrhythm.Rendering;
 using Polyrhythm.Rendering.Shader;
@@ -25,13 +24,25 @@ public class Converter
         this.configuration = configuration;
     }
 
-    public PrefabCreationResult CreatePrefab(InitializeCallback? initializeCallback = null, UpdateCallback? updateCallback = null)
+    public PrefabCreationResult StartRender(InitializeCallback? initializeCallback = null, UpdateCallback? updateCallback = null)
     {
         var model = configuration.InputModel;
+        
+        // Generate color palette
+        var palette = ThemeGenerator.GenerateColorPalette(model, configuration.ShadingDepth);
+
+        // Initialize animation handler
         var animationHandler = new AnimationHandler(model);
         initializeCallback?.Invoke(animationHandler);
         
-        var pipeline = new Pipeline(model, animationHandler, VertexShader.Factory, TriangleShader.Factory);
+        // Initialize pipeline
+        var pipeline = new Pipeline(
+            model, 
+            animationHandler, 
+            VertexShader.Factory, 
+            configuration.ShadingDepth == 0 
+                ? TriangleShaderSolidColor.Factory 
+                : TriangleShader.Factory);
         
         // Render all frames into a list
         var frames = new List<PrefabFrame>();
@@ -69,7 +80,7 @@ public class Converter
         {
             var time = i * configuration.FrameDuration;
             updateCallback?.Invoke(time);
-            prefabObjectPool.AddFrame((float) time, EnumeratePrefabTriangles(frames[i], configuration.InputTheme));
+            prefabObjectPool.AddFrame((float) time, EnumeratePrefabTriangles(frames[i], palette));
             frameCount++;
         }
         
@@ -80,10 +91,10 @@ public class Converter
         foreach (var obj in objects)
             parent.AddChild(obj);
 
-        return new PrefabCreationResult(prefab, objects.Count, frameCount);
+        return new PrefabCreationResult(prefab, palette, objects.Count, frameCount);
     }
 
-    private static IEnumerable<PrefabTriangle> EnumeratePrefabTriangles(PrefabFrame frame, Theme theme)
+    private static IEnumerable<PrefabTriangle> EnumeratePrefabTriangles(PrefabFrame frame, IReadOnlyList<Vector3d> colors)
     {
         foreach (var shadedTriangle in frame.Triangles)
         {
@@ -102,23 +113,22 @@ public class Converter
             GeometryHelper.GetRightTriangles(triangle2d, out var tri0, out var tri1);
             GeometryHelper.GetPositionScaleRotation(tri0, out var position0, out var scale0, out var rotation0);
             GeometryHelper.GetPositionScaleRotation(tri1, out var position1, out var scale1, out var rotation1);
-            var color = GetThemeColor(shadedTriangle.Color, theme);
+            var color = GetThemeColor(shadedTriangle.Color, colors);
 
             yield return new PrefabTriangle(position0, scale0, rotation0, depth, color);
             yield return new PrefabTriangle(position1, scale1, rotation1, depth, color);
         }
     }
 
-    private static int GetThemeColor(Vector3d color, Theme theme)
+    private static int GetThemeColor(Vector3d color, IReadOnlyList<Vector3d> colors)
     {
         int minIndex = 0;
         double minDistance = double.MaxValue;
 
-        for (int i = 0; i < theme.Objects.Length; i++)
+        for (int i = 0; i < colors.Count; i++)
         {
-            var themeColor = theme.Objects[i];
-            var themeColorVec3 = new Vector3d(themeColor.R, themeColor.G, themeColor.B);
-            var distance = Vector3d.Distance(color, themeColorVec3);
+            var themeColor = colors[i];
+            var distance = Vector3d.Distance(color, themeColor);
             if (distance < minDistance)
             {
                 minDistance = distance;
