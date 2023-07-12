@@ -18,9 +18,4 @@
     <ItemGroup>
       <ProjectReference Include="..\Polyrhythm\Polyrhythm.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="obj\Debug\net7.0\" />
-    </ItemGroup>
-
 </Project>
