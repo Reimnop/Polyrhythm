@@ -10,6 +10,10 @@
     <PropertyGroup>
         <PublishAot>true</PublishAot>
     </PropertyGroup>
+    
+    <PropertyGroup>
+        <Version>1.1.0</Version>
+    </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Polyrhythm\Polyrhythm.csproj" />
