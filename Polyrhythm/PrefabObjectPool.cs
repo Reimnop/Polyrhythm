@@ -17,27 +17,9 @@ public class PrefabObjectPool
         public List<RotationKeyframe> RotationKeyframes { get; } = new();
         public List<ColorKeyframe> ColorKeyframes { get; } = new();
 
-        public float CalculateStartTime()
-        {
-            return Math.Min(
-                PositionKeyframes[0].Time, 
-                Math.Min(
-                    ScaleKeyframes[0].Time, 
-                    Math.Min(
-                        RotationKeyframes[0].Time, 
-                        ColorKeyframes[0].Time)));
-        }
-
-        public float CalculateKillTime()
-        {
-            return Math.Max(
-                PositionKeyframes[^1].Time, 
-                Math.Max(
-                    ScaleKeyframes[^1].Time, 
-                    Math.Max(
-                        RotationKeyframes[^1].Time, 
-                        ColorKeyframes[^1].Time)));
-        }
+        public bool Initialized { get; private set; } 
+        public double StartTime { get; set; } = double.MaxValue;
+        public double KillTime { get; set; } = double.MinValue;
 
         public void AddKeyframes(
             PositionKeyframe positionKeyframe, 
@@ -45,6 +27,20 @@ public class PrefabObjectPool
             RotationKeyframe rotationKeyframe, 
             ColorKeyframe colorKeyframe)
         {
+            if (!Initialized)
+                StartTime = Math.Min(
+                    positionKeyframe.Time, 
+                    Math.Min(scaleKeyframe.Time, 
+                        Math.Min(rotationKeyframe.Time, 
+                            colorKeyframe.Time)));
+            Initialized = true;
+            
+            KillTime = Math.Max(
+                positionKeyframe.Time, 
+                Math.Max(scaleKeyframe.Time, 
+                    Math.Max(rotationKeyframe.Time, 
+                        colorKeyframe.Time)));
+
             if (PositionKeyframes.Count == 0 || PositionKeyframes[^1].Value != positionKeyframe.Value)
                 PositionKeyframes.Add(positionKeyframe);
             if (ScaleKeyframes.Count == 0 || ScaleKeyframes[^1].Value != scaleKeyframe.Value)
@@ -145,8 +141,8 @@ public class PrefabObjectPool
         var renderDepth = 80.0f;
         foreach (var stagingPrefabObject in stagingPrefabObjects)
         {
-            var startTime = stagingPrefabObject.CalculateStartTime();
-            var killTime = stagingPrefabObject.CalculateKillTime();
+            var startTime = (float) stagingPrefabObject.StartTime;
+            var killTime = (float) stagingPrefabObject.KillTime;
             
             if (startTime > killTime)
                 continue;
